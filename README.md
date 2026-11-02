@@ -1,5 +1,5 @@
 # 691-01418343-Parallel-Computing
-CUDA-Accelerated Neural Network for MNIST Classification
+CUDA-Accelerated Backpropagation for Neural Network Training
 
 ## student info
 
