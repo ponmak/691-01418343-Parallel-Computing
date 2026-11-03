@@ -3,11 +3,10 @@
 #include <cuda_runtime.h>
 #include <iostream>
 #include <vector>
+#include <algorithm>
+#include <cstdlib>
 #include <climits>
 #include <chrono>
-
-using namespace std;
-
 __global__ void lpaKernel(
     const int* offsets,
     const int* neighbors,
