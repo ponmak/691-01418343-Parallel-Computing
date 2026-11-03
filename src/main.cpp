@@ -9,7 +9,7 @@ int main() {
     Graph graph;
 
     std::string filename =
-        "dataset/com-amazon.ungraph.txt";
+        "dataset/com-orkut.ungraph.txt";
 
     std::cout << "Loading graph...\n";
 
