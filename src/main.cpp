@@ -2,6 +2,7 @@
 #include "graph.h"
 
 #include <iostream>
+#include <algorithm>
 
 int main() {
 
@@ -19,25 +20,47 @@ int main() {
 
     printGraphInfo(graph);
 
-    std::cout << "\nRunning Sequential LPA...\n";
-
     int maxIterations = 20;
 
-    LPAResult result =
+    // Sequential CPU
+    std::cout << "\nRunning Sequential LPA...\n";
+
+    LPAResult cpuResult =
         runSequentialLPA(graph, maxIterations);
 
-    std::cout << "\n===== SEQUENTIAL LPA RESULTS =====\n";
-
+    std::cout << "\n===== CPU RESULTS =====\n";
     std::cout << "Iterations: "
-              << result.iterations << "\n";
-
+              << cpuResult.iterations << "\n";
     std::cout << "Communities: "
-              << result.numCommunities << "\n";
-
+              << cpuResult.numCommunities << "\n";
     std::cout << "Execution Time: "
-              << result.executionTime << " ms\n";
+              << cpuResult.executionTime << " ms\n";
 
-    std::cout << "==================================\n";
+    // Parallel GPU
+    std::cout << "\nRunning CUDA LPA...\n";
+
+    LPAResult gpuResult =
+        runCudaLPA(graph, maxIterations);
+
+    std::cout << "\n===== GPU RESULTS =====\n";
+    std::cout << "Iterations: "
+              << gpuResult.iterations << "\n";
+    std::cout << "Communities: "
+              << gpuResult.numCommunities << "\n";
+    std::cout << "Execution Time: "
+              << gpuResult.executionTime << " ms\n";
+
+    // Compare labels
+    bool sameLabels =
+        (cpuResult.labels == gpuResult.labels);
+
+    std::cout << "\n===== CORRECTNESS CHECK =====\n";
+
+    if (sameLabels) {
+        std::cout << "CPU and GPU labels MATCH!\n";
+    } else {
+        std::cout << "CPU and GPU labels DO NOT MATCH!\n";
+    }
 
     return 0;
 }
