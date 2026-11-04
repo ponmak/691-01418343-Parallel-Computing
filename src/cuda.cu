@@ -96,9 +96,9 @@ BFSResult runParallelBFS(
     int* d_currentSize = nullptr;
     int* d_nextSize = nullptr;
 
-    size_t vertexBytes = (size_t)V * sizeof(int);
-    size_t offsetBytes = (size_t)(V + 1) * sizeof(int);
-    size_t neighborBytes =
+    int vertexBytes = (int)V * sizeof(int);
+    int offsetBytes = (int)(V + 1) * sizeof(int);
+    int neighborBytes =
         graph.neighbors.size() * sizeof(int);
 
     // Allocate GPU memory.
