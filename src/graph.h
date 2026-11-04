@@ -1,40 +1,39 @@
+
 #ifndef GRAPH_H
 #define GRAPH_H
 
 #include <vector>
 #include <cstdint>
-#include <string>
 
 struct Graph {
     int numNodes = 0;
-    uint64_t numEdges = 0;
+    int64_t numEdges = 0;
 
-    // CPU representation
-    std::vector<std::vector<int>> adj;
-
-    // Original node IDs
-    std::vector<int64_t> originalIds;
+    std::vector<int> offsets;
+    std::vector<int> neighbors;
+    std::vector<int> originalIds;
 };
 
-bool loadGraph(const std::string& filename, Graph& graph);
+struct BFSResult {
+    std::vector<int> distance;
 
-void printGraphInfo(const Graph& graph);
+    int source = -1;
+    int reachedVertices = 0;
+    int maxDistance = 0;
 
-struct LPAResult {
-    std::vector<int> labels;
-    int iterations = 0;
-    int numCommunities = 0;
     double executionTime = 0.0;
 };
 
-LPAResult runSequentialLPA(
+Graph loadGraph(const char* filename);
+
+BFSResult runSequentialBFS(
     const Graph& graph,
-    int maxIterations
+    int source
 );
 
-LPAResult runCudaLPA(
+BFSResult runParallelBFS(
     const Graph& graph,
-    int maxIterations
+    int source
 );
 
 #endif

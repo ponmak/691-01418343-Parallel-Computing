@@ -1,65 +1,104 @@
-
 #include "graph.h"
 
 #include <iostream>
+#include <iomanip>
+#include <random>
 #include <algorithm>
+#include <exception>
+
+using namespace std;
 
 int main() {
 
-    Graph graph;
+    try {
 
-    std::string filename =
-        "dataset/com-orkut.ungraph.txt";
+        const char* filename =
+            "dataset/com-orkut.ungraph.txt";
 
-    std::cout << "Loading graph...\n";
+        cout << "Loading Orkut Dataset...\n";
 
-    if (!loadGraph(filename, graph)) {
-        std::cout << "Failed to load graph!\n";
-        return 1;
+        Graph graph = loadGraph(filename);
+
+        cout << "Dataset loaded successfully!\n";
+
+        cout << "Vertices: "
+             << graph.numNodes << "\n";
+
+        cout << "Undirected Edges: "
+             << graph.numEdges << "\n";
+
+        cout << "Adjacency Entries: "
+             << graph.neighbors.size() << "\n";
+
+        // Random Source with fixed seed
+        const unsigned int seed = 42;
+
+        mt19937 generator(seed);
+
+        uniform_int_distribution<int> distribution(
+            0, graph.numNodes - 1
+        );
+
+        int source = distribution(generator);
+
+        cout << "\n===== BFS CONFIGURATION =====\n";
+
+        cout << "Random Seed: " << seed << "\n";
+
+        cout << "Source Internal ID: "
+             << source << "\n";
+
+        cout << "Source Original ID: "
+             << graph.originalIds[source] << "\n";
+
+        cout << "\nRunning Sequential CPU DFS...\n";
+
+        BFSResult cpuResult = runSequentialBFS(graph, source);
+
+        BFSResult gpuResult = runParallelBFS(graph, source);
+
+        cout << "\n===== CPU BFS =====\n";
+        cout << "Reached vertices: "
+                  << cpuResult.reachedVertices << "\n";
+        cout << "Max distance: "
+                  << cpuResult.maxDistance << "\n";
+        cout << "Execution time: "
+                  << cpuResult.executionTime << " ms\n";
+
+        cout << "\n===== GPU BFS =====\n";
+        cout << "Reached vertices: "
+                  << gpuResult.reachedVertices << "\n";
+        cout << "Max distance: "
+                  << gpuResult.maxDistance << "\n";
+        cout << "Execution time: "
+                  << gpuResult.executionTime << " ms\n";
+
+        // Verify all BFS distances.
+        bool correct =
+            cpuResult.distance == gpuResult.distance;
+
+        cout << "\n===== Comparison =====\n";
+        cout << "Reached vertices match: "
+                  << (cpuResult.reachedVertices ==
+                      gpuResult.reachedVertices ? "YES" : "NO")
+                  << "\n";
+                
+        cout << "BFS distances match: "
+                  << (correct ? "YES" : "NO") << "\n";
+                
+        if (gpuResult.executionTime > 0.0) {
+            cout << "Speedup: "
+                      << cpuResult.executionTime /
+                         gpuResult.executionTime
+                      << "x\n";
+        }
     }
+    
+    catch (const exception& e) {
 
-    printGraphInfo(graph);
+        cerr << "Error: " << e.what() << "\n";
 
-    int maxIterations = 20;
-
-    // Sequential CPU
-    std::cout << "\nRunning Sequential LPA...\n";
-
-    LPAResult cpuResult =
-        runSequentialLPA(graph, maxIterations);
-
-    std::cout << "\n===== CPU RESULTS =====\n";
-    std::cout << "Iterations: "
-              << cpuResult.iterations << "\n";
-    std::cout << "Communities: "
-              << cpuResult.numCommunities << "\n";
-    std::cout << "Execution Time: "
-              << cpuResult.executionTime << " ms\n";
-
-    // Parallel GPU
-    std::cout << "\nRunning CUDA LPA...\n";
-
-    LPAResult gpuResult =
-        runCudaLPA(graph, maxIterations);
-
-    std::cout << "\n===== GPU RESULTS =====\n";
-    std::cout << "Iterations: "
-              << gpuResult.iterations << "\n";
-    std::cout << "Communities: "
-              << gpuResult.numCommunities << "\n";
-    std::cout << "Execution Time: "
-              << gpuResult.executionTime << " ms\n";
-
-    // Compare labels
-    bool sameLabels =
-        (cpuResult.labels == gpuResult.labels);
-
-    std::cout << "\n===== CORRECTNESS CHECK =====\n";
-
-    if (sameLabels) {
-        std::cout << "CPU and GPU labels MATCH!\n";
-    } else {
-        std::cout << "CPU and GPU labels DO NOT MATCH!\n";
+        return 1;
     }
 
     return 0;

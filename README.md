@@ -1,5 +1,5 @@
 # 691-01418343-Parallel-Computing
-CUDA-Accelerated Graph Community Detection Using Label Propagation Algorithm
+--
 
 ## student info
 

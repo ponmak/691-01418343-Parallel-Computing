@@ -1,78 +1,52 @@
 
 #include "graph.h"
 
-#include <iostream>
 #include <vector>
-#include <unordered_map>
-#include <algorithm>
+#include <queue>
 #include <chrono>
 
-LPAResult runSequentialLPA( const Graph& graph, int maxIterations) {
-    LPAResult result;
+BFSResult runSequentialBFS(
+    const Graph& graph,
+    int source
+) {
+    BFSResult result;
+    result.source = source;
 
-    int n = graph.numNodes;
+    result.distance.assign(graph.numNodes, -1);
 
-    std::vector<int> oldLabels(n);
-    std::vector<int> newLabels(n);
-
-    // Initialize labels
-    for (int i = 0; i < n; i++) {
-        oldLabels[i] = i;
-    }
+    std::queue<int> frontier;
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Start LPA iterations
-    for (int iter = 0; iter < maxIterations; iter++) {
+    // Level 0
+    result.distance[source] = 0;
+    frontier.push(source);
 
-        bool changed = false;
+    while (!frontier.empty()) {
 
-        for (int node = 0; node < n; node++) {
+        int u = frontier.front();
+        frontier.pop();
 
-            std::unordered_map<int, int> frequency;
+        result.reachedVertices++;
 
-            // Count neighbor labels
-            for (int neighbor : graph.adj[node]) {
-                frequency[oldLabels[neighbor]]++;
-            }
+        int currentDistance = result.distance[u];
 
-            // Isolated node keeps its current label
-            if (frequency.empty()) {
-                newLabels[node] = oldLabels[node];
-                continue;
-            }
-
-            int bestLabel = -1;
-            int bestCount = -1;
-
-            // Find most frequent label
-            // Tie-breaking: choose smallest label
-            for (const auto& entry : frequency) {
-
-                int label = entry.first;
-                int count = entry.second;
-
-                if (count > bestCount ||
-                    (count == bestCount && label < bestLabel)) {
-
-                    bestCount = count;
-                    bestLabel = label;
-                }
-            }
-
-            newLabels[node] = bestLabel;
-
-            if (newLabels[node] != oldLabels[node]) {
-                changed = true;
-            }
+        if (currentDistance > result.maxDistance) {
+            result.maxDistance = currentDistance;
         }
 
-        oldLabels.swap(newLabels);
+        // Explore neighbors
+        for (int i = graph.offsets[u];
+             i < graph.offsets[u + 1]; i++) {
 
-        result.iterations = iter + 1;
+            int v = graph.neighbors[i];
 
-        if (!changed) {
-            break;
+            if (result.distance[v] == -1) {
+
+                result.distance[v] = currentDistance + 1;
+
+                frontier.push(v);
+            }
         }
     }
 
@@ -82,20 +56,6 @@ LPAResult runSequentialLPA( const Graph& graph, int maxIterations) {
         std::chrono::duration<double, std::milli>(
             end - start
         ).count();
-
-    result.labels = oldLabels;
-
-    // Count unique communities
-    std::vector<int> uniqueLabels = oldLabels;
-
-    std::sort(uniqueLabels.begin(), uniqueLabels.end());
-
-    uniqueLabels.erase(
-        std::unique(uniqueLabels.begin(), uniqueLabels.end()),
-        uniqueLabels.end()
-    );
-
-    result.numCommunities = uniqueLabels.size();
 
     return result;
 }

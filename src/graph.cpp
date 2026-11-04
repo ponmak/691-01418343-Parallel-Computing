@@ -1,95 +1,114 @@
-
 #include "graph.h"
 
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <stdexcept>
+#include <string>
 #include <algorithm>
 
-bool loadGraph(const std::string& filename, Graph& graph) {
-    std::ifstream file(filename);
+using namespace std;
+
+// อ่าน Edge List และเรียก callback เมื่ออ่าน Edge ได้
+template <typename Function>
+void readEdges(const char* filename, Function process) {
+
+    ifstream file(filename);
 
     if (!file.is_open()) {
-        std::cerr << "Cannot open dataset!\n";
-        return false;
+        throw runtime_error("Cannot open dataset file!");
     }
 
-    std::unordered_map<int64_t, int> idMap;
+    string line;
+    int u, v;
 
-    auto getNodeId = [&](int64_t id) {
-        auto it = idMap.find(id);
+    while (getline(file, line)) {
 
-        if (it != idMap.end())
-            return it->second;
-
-        int newId = graph.originalIds.size();
-
-        idMap[id] = newId;
-        graph.originalIds.push_back(id);
-
-        return newId;
-    };
-
-    std::string line;
-    int64_t u, v;
-
-    while (std::getline(file, line)) {
-        if (line.empty() || line[0] == '#')
+        if (line.empty() || line[0] == '#') {
             continue;
+        }
 
-        std::istringstream iss(line);
+        istringstream iss(line);
 
-        if (!(iss >> u >> v))
+        if (!(iss >> u >> v)) {
             continue;
+        }
 
-        if (u == v)
+        if (u == v) {
             continue;
+        }
 
-        int src = getNodeId(u);
-        int dst = getNodeId(v);
-
-        if (graph.adj.size() <= static_cast<size_t>(src))
-            graph.adj.resize(src + 1);
-
-        if (graph.adj.size() <= static_cast<size_t>(dst))
-            graph.adj.resize(dst + 1);
-
-        graph.adj[src].push_back(dst);
-        graph.adj[dst].push_back(src);
-
-        graph.numEdges++;
+        process(u, v);
     }
-
-    graph.numNodes = graph.adj.size();
-
-    // Sort neighbors
-    for (auto& neighbors : graph.adj) {
-        std::sort(neighbors.begin(), neighbors.end());
-    }
-
-    file.close();
-
-    return true;
 }
 
-void printGraphInfo(const Graph& graph) {
-    uint64_t totalNeighbors = 0;
-    size_t maxDegree = 0;
+Graph loadGraph(const char* filename) {
 
-    for (const auto& neighbors : graph.adj) {
-        totalNeighbors += neighbors.size();
+    Graph graph;
 
-        maxDegree = std::max(
-            maxDegree,
-            neighbors.size()
-        );
+    unordered_map<int, int> idMap;
+
+    // PASS 1: สร้าง Vertex ID mapping
+    readEdges(filename, [&](int u, int v) {
+
+        if (idMap.find(u) == idMap.end()) {
+            int index = graph.numNodes++;
+            idMap[u] = index;
+            graph.originalIds.push_back(u);
+        }
+
+        if (idMap.find(v) == idMap.end()) {
+            int index = graph.numNodes++;
+            idMap[v] = index;
+            graph.originalIds.push_back(v);
+        }
+
+        graph.numEdges++;
+    });
+
+    // PASS 2: นับ Degree
+    vector<int> degree(graph.numNodes, 0);
+
+    readEdges(filename, [&](int u, int v) {
+
+        int a = idMap.at(u);
+        int b = idMap.at(v);
+
+        degree[a]++;
+        degree[b]++;
+    });
+
+    // สร้าง CSR offsets
+    graph.offsets.resize(graph.numNodes + 1);
+
+    graph.offsets[0] = 0;
+
+    for (int i = 0; i < graph.numNodes; i++) {
+
+        graph.offsets[i + 1] =
+            graph.offsets[i] + degree[i];
     }
 
-    std::cout << "\n===== GRAPH INFORMATION =====\n";
-    std::cout << "Nodes: " << graph.numNodes << "\n";
-    std::cout << "Undirected edges: " << graph.numEdges << "\n";
-    std::cout << "Adjacency entries: " << totalNeighbors << "\n";
-    std::cout << "Maximum degree: " << maxDegree << "\n";
-    std::cout << "=============================\n";
+    // จองพื้นที่ Neighbor
+    graph.neighbors.resize(
+        static_cast<size_t>(graph.offsets.back())
+    );
+
+    // ใช้ cursor สำหรับเติม Neighbor
+    vector<int> cursor(
+        graph.offsets.begin(),
+        graph.offsets.end() - 1
+    );
+
+    // PASS 3: เติม Neighbor
+    readEdges(filename, [&](int u, int v) {
+
+        int a = idMap.at(u);
+        int b = idMap.at(v);
+
+        graph.neighbors[cursor[a]++] = b;
+        graph.neighbors[cursor[b]++] = a;
+    });
+
+    return graph;
 }
