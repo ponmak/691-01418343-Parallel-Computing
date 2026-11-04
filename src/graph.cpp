@@ -9,7 +9,6 @@
 
 using namespace std;
 
-// อ่าน Edge List และเรียก callback เมื่ออ่าน Edge ได้
 template <typename Function>
 void readEdges(const char* filename, Function process) {
 
